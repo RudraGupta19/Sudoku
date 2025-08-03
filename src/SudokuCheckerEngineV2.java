@@ -106,20 +106,3 @@ public class SudokuCheckerEngineV2 {
          System.out.println("**** HORRAY: ALL TESTS PASSED ****");
    }
 }
-
-/*
-
-C:\Users\adlife\.jdks\openjdk-24.0.1\bin\java.exe "-javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2025.1.4.1\lib\idea_rt.jar=51526" -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 -classpath C:\Users\adlife\IdeaProjects\\untitled\out\test\\untitled;C:\Users\adlife\.m2\repository\junit\junit\4.13.2\junit-4.13.2.jar;C:\Users\adlife\.m2\repository\org\hamcrest\hamcrest-core\1.3\hamcrest-core-1.3.jar SudokuCheckerEngineV2
-Checking empty board...passed.
-Checking incomplete, valid board...passed.
-Checking complete, valid board...passed.
-Checking dirty data board...passed.
-Checking row violating board...passed.
-Checking col violating board...passed.
-Checking row&col violating board...passed.
-Checking mini-square violating board...passed.
-**** HORRAY: ALL TESTS PASSED ****
-
-Process finished with exit code 0
-
- */

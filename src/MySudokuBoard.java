@@ -1,216 +1,199 @@
 /*
- * MySudokuBoard.java
- * Name: Rudra Gupta
- * CS 143
- * HW Core Topics: sets, maps, efficiency, boolean zen
- *
- * This class represents a 9×9 Sudoku board. It provides methods
- * to verify that the board follows Sudoku rules (no invalid symbols,
- * no duplicate digits in rows, columns, or 3×3 squares) and to check
- * if the puzzle is completely solved (all cells filled with digits 1–9
- * and each digit appears exactly nine times).
- */
+   Name: Rudra Gupta
+   Course: CS 143
+   Assignment: Sudoku Solver
+   Core Topics: Recursion and Backtracking
+
+   Description:
+   This class represents a 9x9 Sudoku board and includes logic to:
+   - Load a board from a file
+   - Validate the current state of the board
+   - Check if the board is fully solved
+   - Solve the board using recursive backtracking
+   - Return a string representation of the board
+*/
 
 import java.util.*;
 import java.io.*;
 
-/** A Sudoku board of size 9×9. */
+/**
+ * The MySudokuBoard class models a Sudoku puzzle board and includes methods
+ * to validate, solve, and print the board using recursive backtracking.
+ */
 public class MySudokuBoard {
-   /** The board dimension (number of rows and columns). */
-   public static final int SIZE = 9;
+   public final int SIZE = 9;  // Standard Sudoku board size (9x9)
+   protected char[][] myBoard;  // 2D array representing the current board
 
    /**
-    * myBoard[r][c] holds '.' for an empty cell or '1'–'9' for a filled cell.
-    * Class invariant: myBoard is always a SIZE×SIZE array of valid symbols.
-    */
-   protected char[][] myBoard;
-
-   /**
-    * Constructor: load a Sudoku board from the given file path.
-    * Precondition: theFile names a readable text file containing exactly
-    * SIZE lines, each with SIZE characters ('.' or '1'–'9').
-    * Postcondition: myBoard[r][c] matches the character at line r, column c.
+    * Constructor: Loads the Sudoku board from a given input file.
+    *
+    * PRE: theFile must be a valid path to a 9-line file, each line with exactly 9 characters
+    *      consisting of digits '1'-'9' and/or '.' representing empty cells.
+    * POST: Initializes the board from the file.
+    *
+    * @param theFile The file path containing the Sudoku board.
     */
    public MySudokuBoard(String theFile) {
       myBoard = new char[SIZE][SIZE];
-      try (Scanner file = new Scanner(new File(theFile))) {
+      try {
+         Scanner file = new Scanner(new File(theFile));
          for (int row = 0; row < SIZE; row++) {
-            String line = file.nextLine();
-            // { line.length() == SIZE }
-            for (int col = 0; col < SIZE; col++) {
-               myBoard[row][col] = line.charAt(col);
+            String theLine = file.nextLine();
+            for (int col = 0; col < theLine.length(); col++) {
+               myBoard[row][col] = theLine.charAt(col);
             }
          }
       } catch (Exception e) {
-         System.out.println("Error reading board file: " + theFile);
+         System.out.println("Something went wrong :(");
          e.printStackTrace();
       }
    }
 
    /**
-    * Return a string representation of the board.
-    * Postcondition: returned string begins with "My Board:" and shows
-    * SIZE lines of SIZE characters reflecting current board state.
-    */
-   @Override
-   public String toString() {
-      StringBuilder sb = new StringBuilder("My Board:\n\n");
-      for (int row = 0; row < SIZE; row++) {
-         for (int col = 0; col < SIZE; col++) {
-            sb.append(myBoard[row][col]);
-         }
-         sb.append('\n');
-      }
-      return sb.toString();
-   }
-
-   /**
-    * Check that the board meets all Sudoku constraints:
-    * (1) only '.' or '1'–'9' symbols,
-    * (2) no duplicate digits in any row,
-    * (3) no duplicate digits in any column,
-    * (4) no duplicate digits in any 3×3 mini-square.
-    * Postcondition: board is not modified.
-    * @return true if valid, false otherwise.
-    */
-   public boolean isValid() {
-      return validData() && rowsValid() && colsValid() && miniSquaresValid();
-   }
-
-   /**
-    * Check that the board is completely solved:
-    * all cells are '1'–'9', each digit appears exactly SIZE times,
-    * and the board is valid.
-    * Precondition: isValid() returns true.
-    * Postcondition: board is not modified.
-    * @return true if solved, false otherwise.
+    * Checks if the Sudoku board is both valid and completely solved.
+    *
+    * PRE: Board must be well-formed and initialized.
+    * POST: Returns true if the board has no violations and each digit 1–9 appears exactly 9 times.
+    *
+    * @return true if the board is valid and solved, false otherwise.
     */
    public boolean isSolved() {
-      if (!isValid()) return false;
-      int[] counts = new int[SIZE + 1];
+      if (!isValid())
+         return false;
+
+      Map<Character, Integer> map = new HashMap<>();
+      for (char[] row : myBoard) {
+         for (char cell : row) {
+            map.put(cell, map.getOrDefault(cell, 0) + 1);
+         }
+      }
+
+      return map.keySet().size() == 9 && Collections.frequency(map.values(), 9) == 9;
+   }
+
+   /**
+    * Validates the current board state by checking:
+    * - Only valid characters ('.' or '1' through '9') are present.
+    * - No duplicate values exist in any row, column, or 3x3 subgrid.
+    *
+    * PRE: Board is assumed to be 9x9 with valid characters.
+    * POST: Returns true if the board follows all Sudoku rules.
+    *
+    * @return true if valid, false if any violations exist.
+    */
+   public boolean isValid() {
+      // Check for invalid characters
+      for (char[] row : myBoard)
+         for (char cell : row)
+            if (cell != '.' && (cell < '1' || cell > '9'))
+               return false;
+
+      // Row and column uniqueness check
       for (int r = 0; r < SIZE; r++) {
+         Set<Character> trackingRow = new HashSet<>();
+         Set<Character> trackingCol = new HashSet<>();
          for (int c = 0; c < SIZE; c++) {
-            char ch = myBoard[r][c];
-            if (ch < '1' || ch > '9') {
-               return false;
-            }
-            counts[ch - '0']++;
-         }
-      }
-      for (int num = 1; num <= SIZE; num++) {
-         if (counts[num] != SIZE) return false;
-      }
-      return true;
-   }
+            char rowChar = myBoard[r][c];
+            char colChar = myBoard[c][r];
 
-   /**
-    * Check that every cell contains only '.' or '1'–'9'.
-    * Postcondition: board is not modified.
-    * @return true if data valid, false otherwise.
-    */
-   private boolean validData() {
-      for (int r = 0; r < SIZE; r++) {
-         for (int c = 0; c < SIZE; c++) {
-            char ch = myBoard[r][c];
-            if (ch != '.' && (ch < '1' || ch > '9')) {
-               return false;
+            if (rowChar != '.') {
+               if (trackingRow.contains(rowChar)) return false;
+               trackingRow.add(rowChar);
+            }
+
+            if (colChar != '.') {
+               if (trackingCol.contains(colChar)) return false;
+               trackingCol.add(colChar);
             }
          }
       }
-      return true;
-   }
 
-   /**
-    * Check that no row contains duplicate digits '1'–'9'.
-    * Postcondition: board is not modified.
-    * @return true if all rows valid, false otherwise.
-    */
-   private boolean rowsValid() {
-      for (int r = 0; r < SIZE; r++) {
+      // Check 3x3 subgrids
+      for (int square = 1; square <= 9; square++) {
+         char[][] mini = miniSquare(square);
          Set<Character> seen = new HashSet<>();
-         for (int c = 0; c < SIZE; c++) {
-            char ch = myBoard[r][c];
-            if (ch >= '1' && ch <= '9' && !seen.add(ch)) {
-               return false;
-            }
-         }
-      }
-      return true;
-   }
-
-   /**
-    * Check that no column contains duplicate digits '1'–'9'.
-    * Postcondition: board is not modified.
-    * @return true if all columns valid, false otherwise.
-    */
-   private boolean colsValid() {
-      for (int c = 0; c < SIZE; c++) {
-         Set<Character> seen = new HashSet<>();
-         for (int r = 0; r < SIZE; r++) {
-            char ch = myBoard[r][c];
-            if (ch >= '1' && ch <= '9' && !seen.add(ch)) {
-               return false;
-            }
-         }
-      }
-      return true;
-   }
-
-   /**
-    * Check that no 3×3 mini-square contains duplicate digits '1'–'9'.
-    * Postcondition: board is not modified.
-    * @return true if all mini-squares valid, false otherwise.
-    */
-   private boolean miniSquaresValid() {
-      for (int spot = 1; spot <= SIZE; spot++) {
-         Set<Character> seen = new HashSet<>();
-         char[][] mini = miniSquare(spot);
          for (int r = 0; r < 3; r++) {
             for (int c = 0; c < 3; c++) {
-               char ch = mini[r][c];
-               if (ch >= '1' && ch <= '9' && !seen.add(ch)) {
-                  return false;
+               char val = mini[r][c];
+               if (val != '.') {
+                  if (seen.contains(val)) return false;
+                  seen.add(val);
                }
             }
          }
       }
+
       return true;
    }
 
    /**
-    * Return the 3×3 block corresponding to the given mini-square index.
-    * Precondition: spot is in 1..SIZE.
-    * Postcondition: returned array is 3×3 and contains characters
-    * from the corresponding region of myBoard.
-    * @param spot the index (1–9) of the mini-square, row-major order.
-    * @return a 3×3 char array of that mini-square.
+    * Extracts a 3x3 subgrid ("mini-square") from the board based on position.
+    *
+    * PRE: spot must be between 1 and 9, counting left to right, top to bottom.
+    * POST: Returns a 3x3 array of the corresponding subgrid.
+    *
+    * @param spot The 1-based index of the subgrid (1 to 9).
+    * @return A 3x3 character array of the mini-square.
     */
    private char[][] miniSquare(int spot) {
       char[][] mini = new char[3][3];
-      int startRow = ((spot - 1) / 3) * 3;
-      int startCol = ((spot - 1) % 3) * 3;
       for (int r = 0; r < 3; r++) {
          for (int c = 0; c < 3; c++) {
-            mini[r][c] = myBoard[startRow + r][startCol + c];
+            mini[r][c] = myBoard[(spot - 1) / 3 * 3 + r][(spot - 1) % 3 * 3 + c];
          }
       }
       return mini;
    }
+
+   /**
+    * Solves the Sudoku board using recursive backtracking.
+    *
+    * PRE: Board must be initialized and may contain '.' for unfilled cells.
+    * POST: Fills the board with a valid solution if possible.
+    *
+    * @return true if a solution exists and was filled in, false otherwise.
+    */
+   public boolean solve() {
+      if (!isValid()) {
+         return false;
+      }
+      if (isSolved()) {
+         return true;
+      }
+
+      for (int row = 0; row < SIZE; row++) {
+         for (int col = 0; col < SIZE; col++) {
+            if (myBoard[row][col] == '.') {
+               for (char num = '1'; num <= '9'; num++) {
+                  myBoard[row][col] = num;
+                  if (isValid() && solve()) {
+                     return true;
+                  }
+                  myBoard[row][col] = '.'; // backtrack
+               }
+               return false; // if no number fits, trigger backtracking
+            }
+         }
+      }
+
+      return false; // fallback, shouldn't reach here if solved properly
+   }
+
+   /**
+    * Creates a string representation of the current board.
+    *
+    * POST: Returns a printable version of the board with row-wise formatting.
+    *
+    * @return A string view of the current board state.
+    */
+   public String toString() {
+      StringBuilder result = new StringBuilder("My Board:\n\n");
+      for (int row = 0; row < SIZE; row++) {
+         for (int col = 0; col < SIZE; col++) {
+            result.append(myBoard[row][col]);
+         }
+         result.append("\n");
+      }
+      return result.toString();
+   }
 }
-
-/*
-
-C:\Users\adlife\.jdks\openjdk-24.0.1\bin\java.exe "-javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2025.1.4.1\lib\idea_rt.jar=51526" -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 -classpath C:\Users\adlife\IdeaProjects\\untitled\out\test\\untitled;C:\Users\adlife\.m2\repository\junit\junit\4.13.2\junit-4.13.2.jar;C:\Users\adlife\.m2\repository\org\hamcrest\hamcrest-core\1.3\hamcrest-core-1.3.jar SudokuCheckerEngineV2
-Checking empty board...passed.
-Checking incomplete, valid board...passed.
-Checking complete, valid board...passed.
-Checking dirty data board...passed.
-Checking row violating board...passed.
-Checking col violating board...passed.
-Checking row&col violating board...passed.
-Checking mini-square violating board...passed.
-**** HORRAY: ALL TESTS PASSED ****
-
-Process finished with exit code 0
-
- */
